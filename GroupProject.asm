@@ -54,14 +54,14 @@ prCard: # initialize vars
 	move $t1, $a0 # incremented value (i)
 	move $t5, $zero # increment counter (c)
 	addi $t1, $t1, -1 # initialize i at n - 1
-	#li $s2, 7 # value before newline
+
 # ALGORITHM PSEUDOCODE
 # While i < n:
 #  i++
 #  if i >= MAX: break
 #  if i does not contain binary position n (ex. 8 = 001000): continue
 #  print i
-#  if i % 8 == 7, print a new line
+#  if c is divisible by 8, print a new line
 #  else, print delimiter ", "
 prLoop: addi $t1, $t1, 1
 	slt $t3, $t1, $s1
