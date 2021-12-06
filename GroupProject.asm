@@ -6,6 +6,7 @@ userAsk:    .asciiz "Is your number shown bellow?  Type Y for yes, and N for no.
 result:       .asciiz "THE NUMBER YOU WERE THINKING OF WAS: "
 answer: .space 512
 invalidPrompt: .asciiz "The character you entered was invalid please enter a 'Y' or 'N'\n"
+invalidUserSum: .asciiz "You answered 'N' for all cards!\n"
 bitmapDisplayInstructions: .asciiz  "To view the optional bitmap display:\nNote: Do not change the bitmap display while the program runs, as it will freeze Mars. Stop the program to make changes \n 1. open 'Bitmap Display' from 'Tools' in Mars \n 2. use the following settings \n	Unit Width in Pixels: 4 \n	Unit Height in Pixels: 4\n	Display Width in Pixels: 256\n	Display Height in Pixels: 256\n	Base Address for Display: 0x10008000 gp\n3. Press 'Connect to Mips' in the Bitmap Tool\n\n"
 enterPrompt: .asciiz "Press Enter to Continue\n"
 playAgainPrompt: .asciiz "Do you want to play again? Press Y or N."
@@ -29,14 +30,6 @@ main:
 	li $v0, 4                          
 	la $a0, bitmapDisplayInstructions 
 	syscall
-	#slow down the user to confirm that they have read.
-	li $v0, 4                          
-	la $a0, enterPrompt 
-	syscall
-	la  $a0, answer
-   	li  $a1, 512
-        li  $v0, 8
-        syscall
 	#iwill print imageTitle 
 	la $a0, imageTitle
 	jal printImage
@@ -65,7 +58,7 @@ gameStart:
 	#generate mask(3 or 5)
 	li $a1, 2 #upper bound (exclusive)
    	li $v0, 42 
-   	syscall #generates the random number. and places it into $a0
+   	syscall 
 	li $t1, 5
 	beq $a0, $zero, diffMask
 	li $t1, 3
@@ -74,17 +67,21 @@ diffMask:
 	move $a0, $t0
 	move $a1, $t1
 	jal genCardSeqeuence
-	#get results
+	#Check if userinputsum is valid
+	bne $v0, $zero, validAnswer
+	jal drumroll #dramatic failure
+	li $v0, 4                          
+	la $a0, invalidUserSum 
+	syscall
+	jal invalidSound
+	j playAgain
+validAnswer:
 	move $t9, $v0
-	
-	afterCards:	
+	#play drumroll before results
+	jal drumroll
 	la $a0, endl
 	li $v0, 4
 	syscall	
-	
-	#play drumroll before results
-	jal drumroll
-	
         li $v0, 4                          
 	la $a0, result
 	syscall
@@ -94,15 +91,12 @@ diffMask:
 	la $a0, endl
 	li $v0, 4
 	syscall	
-
 	jal fanfare
-	
-#Ask to play again
+playAgain:
 	#iwill print imageTitle 
 	la $a0, imageTitle
 	jal printImage
 	la $a0, endl
-	
 	li $v0, 4
 	syscall
 	 li $v0, 4                          
@@ -141,11 +135,9 @@ getUserInputInvalid:
 	#Make Noise
 	addiu $sp, $sp, -4	#set up space for the stack ra
 	sw $ra, ($sp)		#save $ra in  stack
-	#FUNCTION HERE TO MAKE NOISE
-
+	jal invalidSound
 	lw $ra, ($sp)		#load  $ra 
 	addiu $sp, $sp, 4	#free the stack
-	
 	#print message to try again
 	la $a0, endl
 	li $v0, 4
@@ -162,8 +154,7 @@ getUserInputValid:
 	addiu $sp, $sp, -8 	#set up space for the stack 2
 	sw $ra, 4($sp)		#save $ra in uppmost stack
 	sw $t4, ($sp)			#save $t4 
-	#FUNCTION HERE TO MAKE NOISE
-
+	jal validSound
 	lw $ra, 4($sp)			#load  $ra 
 	lw $t4, ($sp)			#load $t4
 	addiu $sp, $sp, 8	#free  stack 2
@@ -261,7 +252,6 @@ gCSLoopStart:
 	move $a0, $t2
 	jal printCardBitmap
 	
-	
 	#-------Get User Input----------
         jal getUserInput # v0 will hold 0 for N , 1 for Y
         beq $v0, $zero, gCSLoopIncrement #if input = N, that means skip this section
@@ -337,6 +327,7 @@ prExit: jr $ra
 
 
 #Name: printImage
+#Author: Jordan Zon
 #Args: 	a0 - image address (use la)
 #Return: n/a
 #Notes:	This function prints to the bitmap tool/ an image given the image address
@@ -357,6 +348,7 @@ printImageExit:
 	jr $ra
 
 #Name: printCardBitmap
+#Author: Jordan Zon
 #Args: 	a0  - cardNumber(1-6)
 #Return: n/a
 #Notes:	This function prints to the bitmap tool/display address in memory, the card image given it's number
@@ -458,3 +450,35 @@ fanfare:
 	syscall
 	jr $ra
 
+# Name: invalidSound
+# Author: David Allen
+# Args: N/A
+# Return: N/A
+# Notes: 
+invalidSound:
+	li $a0, 50
+	li $a1, 400
+	li $a2, 56
+	li $a3, 100
+	li $v0, 33
+	syscall 
+	li $a0, 40
+	li $a1, 700
+	li $a2, 56
+	li $a3, 100
+	li $v0, 33
+	syscall 
+	jr $ra
+# Name: validSound
+# Author: David Allen
+# Args: N/A
+# Return: N/A
+# Notes: 
+validSound:
+	li $a0, 80 #pitch
+	li $a1, 300 #length
+	li $a2, 10	#patch
+	li $a3, 59#volume
+	li $v0, 31
+	syscall 
+	jr $ra
