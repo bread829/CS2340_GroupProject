@@ -13,4 +13,4 @@ This program plays a magic number game, where the user thinks of a number betwee
 The program features:
 - An optional bitmap display
 - Sound when the input is invalid/valid, in addition fanfare and drumroll at the end
-- 
+- User input validation, and dealing with the event that the User inputs 'N' for all cards
